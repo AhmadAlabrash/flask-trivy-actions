@@ -1,112 +1,90 @@
-pipeline {
-    agent any
+name: Python CI with Trivy and Docker Hub
 
-    environment {
-        AWS_ACCOUNT_ID     = '612990353866'
-        AWS_DEFAULT_REGION = 'eu-central-1'
-        ECR_REPO          = 'python-app'
-        IMAGE_TAG         = "${BUILD_NUMBER}"
-        IMAGE_REPO        = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${ECR_REPO}"
-        IMAGE_URI         = "${IMAGE_REPO}:${IMAGE_TAG}"
+on:
+  push:
+    branches: [ "main" ]
 
-        SONARQUBE_ENV     = 'sonarqube-server'
-        EKS_CLUSTER_NAME  = 'attractive-rock-outfit'
-        HELM_RELEASE      = 'python-app'
-        K8S_NAMESPACE     = 'default'
-    }
+jobs:
+  ci:
+    runs-on: ubuntu-latest
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
+    env:
+      IMAGE_NAME: ahmad09x/python-flask-app
 
-        stage('Install Dependencies') {
-            steps {
-                dir('python-app') {
-                    sh '''
-                        python3 -m venv venv
-                        . venv/bin/activate
-                        pip install --upgrade pip
-                        pip install -r requirements.txt
-                    '''
-                }
-            }
-        }
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-        stage('Run Tests') {
-            steps {
-                dir('python-app') {
-                    sh '''
-                        . venv/bin/activate
-                        pytest tests --maxfail=1 --disable-warnings --cov=app --cov-report=xml
-                    '''
-                }
-            }
-        }
+      - name: Set image tag
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-        stage('SonarQube Analysis') {
-            steps {
-                dir('python-app') {
-                    withSonarQubeEnv("${SONARQUBE_ENV}") {
-                        sh '''
-                            . venv/bin/activate
-                            sonar-scanner
-                        '''
-                    }
-                }
-            }
-        }
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-        stage('Build Docker Image') {
-            steps {
-                dir('python-app') {
-                    sh '''
-                        docker build -t ${ECR_REPO}:${IMAGE_TAG} .
-                        docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
-                    '''
-                }
-            }
-        }
+      - name: Run tests
+        run: pytest
 
-        stage('Push Docker Image to ECR') {
-            steps {
-                sh '''
-                    aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
-                    docker push ${IMAGE_URI}
-                '''
-            }
-        }
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-        stage('Deploy to EKS with Helm') {
-            steps {
-                sh '''
-                    aws eks update-kubeconfig --region ${AWS_DEFAULT_REGION} --name ${EKS_CLUSTER_NAME}
-                    helm upgrade --install ${HELM_RELEASE} ./helm/python-app \
-                      --namespace ${K8S_NAMESPACE} \
-                      --create-namespace \
-                      --set image.repository=${IMAGE_REPO} \
-                      --set image.tag=${IMAGE_TAG}
-                '''
-            }
-        }
-    }
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    post {
-        success {
-            echo 'Pipeline completed successfully.'
-        }
-        failure {
-            echo 'Pipeline failed.'
-        }
-    }
-}
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+          push: false
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+
+      - name: Checkout deploy repo
+        uses: actions/checkout@v4
+        with:
+          repository: AhmadAlabrash/flask-argocd-deploy
+          token: ${{ secrets.DEPLOY_REPO_TOKEN }}
+          path: deploy-repo
+
+      - name: Update Helm values with new image tag
+        run: |
+          sed -i "s|repository: .*|repository: ${IMAGE_NAME}|g" deploy-repo/helm/python-app/values.yaml
+          sed -i "s|tag: .*|tag: \"${IMAGE_TAG}\"|g" deploy-repo/helm/python-app/values.yaml
+
+      - name: Commit and push deploy repo changes
+        run: |
+          cd deploy-repo
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Update python app image to ${IMAGE_TAG}" || echo "No changes to commit"
+          git push

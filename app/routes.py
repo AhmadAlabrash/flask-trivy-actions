@@ -1,7 +1,5 @@
-from flask import render_template
 from app import app
 
-
 @app.route("/")
-def index():
-    return render_template("index.html")
+def home():
+    return "Hello from Flask CI/CD with GitHub Actions, Trivy, Docker Hub, and Argo CD!"

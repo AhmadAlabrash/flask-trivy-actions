@@ -1,1 +1,1 @@
-# flask-trivy-actions
+# flask-trivy-actions-python

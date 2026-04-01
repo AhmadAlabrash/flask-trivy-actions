@@ -28,8 +28,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest
+- name: Run tests
+  run: |
+    export PYTHONPATH=$(pwd)
+    pytest tests
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3

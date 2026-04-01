@@ -120,7 +120,7 @@ The built images are stored in Docker Hub:
 
 ```text
 ahmad09x/python-flask-app
-```
+``
 
 ---
 

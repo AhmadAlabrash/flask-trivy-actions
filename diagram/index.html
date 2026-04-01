@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flask Full CI/CD GitOps Diagram</title>
+  <style>
+    :root {
+      --bg1: #f7f9fc;
+      --bg2: #edf3ff;
+      --card: #ffffff;
+      --border: #d8e2f0;
+      --text: #1f2937;
+      --muted: #5b6472;
+      --blue: #2563eb;
+      --blue2: #1d4ed8;
+      --green: #16a34a;
+      --orange: #ea580c;
+      --red: #dc2626;
+      --purple: #7c3aed;
+      --cyan: #0891b2;
+      --shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+      --soft: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    .page {
+      max-width: 1700px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .intro {
+      background: #ecfeff;
+      border: 1px solid #a5f3fc;
+      color: #155e75;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .flow-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .flow-step {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 12px;
+      text-align: center;
+      font-weight: 800;
+      box-shadow: var(--shadow);
+      font-size: 15px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 240px 390px 270px 330px 340px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      min-height: 220px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+    }
+
+    .center { text-align: center; }
+
+    .icon-circle {
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 14px;
+      font-size: 40px;
+      color: white;
+      box-shadow: 0 10px 18px rgba(17, 24, 39, 0.15);
+    }
+
+    .gh { background: linear-gradient(135deg, #111827, #374151); }
+    .gha { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+    .docker { background: linear-gradient(135deg, #0891b2, #2563eb); }
+    .gitops { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .argo { background: linear-gradient(135deg, #7c3aed, #4f46e5); }
+
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .label {
+      display: inline-block;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: var(--blue2);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-top: 8px;
+    }
+
+    .pipeline-header {
+      margin-bottom: 16px;
+      background: var(--soft);
+      border: 2px solid #94a3b8;
+      border-radius: 18px;
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 23px;
+      font-weight: 800;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step {
+      position: relative;
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: white;
+      font-weight: 800;
+      text-align: center;
+      background: var(--blue);
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+    }
+
+    .step small {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      opacity: 0.95;
+      font-weight: 600;
+    }
+
+    .step.green { background: var(--green); box-shadow: 0 8px 18px rgba(22, 163, 74, 0.2); }
+    .step.orange { background: var(--orange); box-shadow: 0 8px 18px rgba(234, 88, 12, 0.2); }
+    .step.red { background: var(--red); box-shadow: 0 8px 18px rgba(220, 38, 38, 0.2); }
+    .step.purple { background: var(--purple); box-shadow: 0 8px 18px rgba(124, 58, 237, 0.2); }
+    .step.cyan { background: var(--cyan); box-shadow: 0 8px 18px rgba(8, 145, 178, 0.2); }
+
+    .step:not(:last-child)::after {
+      content: "↓";
+      position: absolute;
+      left: 50%;
+      bottom: -22px;
+      transform: translateX(-50%);
+      color: #64748b;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .mini {
+      border: 2px dashed #cbd5e1;
+      background: #fff;
+      border-radius: 18px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+
+    .mini h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+    }
+
+    .chip-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+    }
+
+    .chip.orange {
+      background: #fff7ed;
+      border-color: #fdba74;
+      color: #9a3412;
+    }
+
+    .chip.green {
+      background: #ecfdf5;
+      border-color: #86efac;
+      color: #166534;
+    }
+
+    .cluster {
+      margin-top: 14px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 20px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+
+    .argo-box {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: white;
+      border-radius: 16px;
+      padding: 12px 14px;
+      text-align: center;
+      font-weight: 800;
+      margin-bottom: 12px;
+      box-shadow: 0 10px 18px rgba(79, 70, 229, 0.2);
+    }
+
+    .helm-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      border-radius: 14px;
+      padding: 11px 12px;
+      text-align: center;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .lb {
+      width: 190px;
+      margin: 0 auto 16px;
+      background: var(--blue2);
+      color: white;
+      border-radius: 999px;
+      padding: 12px 16px;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .apps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .app-box {
+      background: white;
+      border: 1px solid #bfdbfe;
+      border-radius: 16px;
+      padding: 12px 10px;
+      text-align: center;
+      font-weight: 800;
+      box-shadow: 0 8px 18px rgba(59, 130, 246, 0.1);
+      font-size: 14px;
+    }
+
+    .emoji {
+      display: block;
+      font-size: 28px;
+      margin-bottom: 6px;
+    }
+
+    .repo-box {
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .footer {
+      margin-top: 24px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid #dbe4f3;
+      border-radius: 16px;
+      padding: 14px 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    code {
+      background: #eff6ff;
+      border: 1px solid #dbeafe;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 1500px) {
+      .flow-strip, .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Flask Full CI/CD GitOps Pipeline Diagram</h1>
+    <p class="subtitle">GitHub Actions builds and scans the image, pushes it to Docker Hub, updates the GitOps deploy repository, and Argo CD syncs the application into Kubernetes.</p>
+
+    <div class="intro">
+      This architecture separates CI and CD clearly. The application repository handles testing, Docker build, Trivy security scan, and Docker Hub push. The deploy repository stores Helm configuration and Argo CD watches that repository as the source of truth for Kubernetes deployment.
+    </div>
+
+    <div class="flow-strip">
+      <div class="flow-step">1. Source Code</div>
+      <div class="flow-step">2. CI with GitHub Actions</div>
+      <div class="flow-step">3. Security Scan & Image Push</div>
+      <div class="flow-step">4. GitOps Repo Update</div>
+      <div class="flow-step">5. Argo CD Sync to Kubernetes</div>
+    </div>
+
+    <div class="grid">
+      <section class="panel center">
+        <div class="icon-circle gh">🐙</div>
+        <h2>App Repository</h2>
+        <p class="muted">Source code for the Flask application, tests, Dockerfile, and GitHub Actions workflow.</p>
+        <div class="label">flask-trivy-actions</div>
+        <div class="mini">
+          <h3>Main Files</h3>
+          <div class="muted">
+            <code>app/</code><br>
+            <code>tests/</code><br>
+            <code>requirements.txt</code><br>
+            <code>Dockerfile</code><br>
+            <code>.github/workflows/ci.yml</code>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="icon-circle gha">⚙️</div>
+        <div class="pipeline-header">GitHub Actions CI</div>
+        <div class="steps">
+          <div class="step">1. Checkout Code<small>Pull the latest Flask app source</small></div>
+          <div class="step">2. Install Dependencies<small>requirements-dev.txt for testing</small></div>
+          <div class="step green">3. Run Pytest<small>Validate Flask routes and app logic</small></div>
+          <div class="step purple">4. Build Docker Image<small>Create runtime image for Flask app</small></div>
+          <div class="step red">5. Trivy Scan<small>Fail on HIGH / CRITICAL vulnerabilities</small></div>
+          <div class="step cyan">6. Push to Docker Hub<small>Publish version tag and latest tag</small></div>
+          <div class="step orange">7. Update Deploy Repo<small>Write new image tag into Helm values</small></div>
+        </div>
+      </section>
+
+      <section class="panel center">
+        <div class="icon-circle docker">🐳</div>
+        <h2>Docker Hub</h2>
+        <p class="muted">Container registry storing the application image built by GitHub Actions.</p>
+        <div class="chip-list">
+          <div class="chip">ahmad09x/python-flask-app:20f2ab9</div>
+          <div class="chip">ahmad09x/python-flask-app:latest</div>
+          <div class="chip green">Only scanned images are pushed</div>
+        </div>
+        <div class="repo-box">Image registry used by Kubernetes during deployment</div>
+      </section>
+
+      <section class="panel">
+        <div class="icon-circle gitops">📦</div>
+        <h2>GitOps Deploy Repository</h2>
+        <p class="muted">Separate repository that stores deployment configuration and acts as the single source of truth for CD.</p>
+        <div class="label">flask-argocd-deploy</div>
+        <div class="chip-list">
+          <div class="chip orange">Helm chart in <code>helm/python-app/</code></div>
+          <div class="chip orange">Argo CD Application in <code>argocd/python-app.yaml</code></div>
+          <div class="chip orange">values.yaml updated with new image tag</div>
+        </div>
+        <div class="mini">
+          <h3>What GitHub Actions changes</h3>
+          <div class="muted">It updates <code>image.repository</code> and <code>image.tag</code> inside Helm values, commits the change, and pushes it to this repository.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="icon-circle argo">🚀</div>
+        <h2>Argo CD + Kubernetes</h2>
+        <p class="muted">Argo CD watches the deploy repository, detects the updated image tag, and syncs Kubernetes using Helm.</p>
+        <div class="cluster">
+          <div class="argo-box">Argo CD Application Sync</div>
+          <div class="helm-box">Helm Upgrade / GitOps Reconciliation</div>
+          <div class="lb">LoadBalancer Service</div>
+          <div class="apps">
+            <div class="app-box"><span class="emoji">🐍</span>Flask Pod</div>
+            <div class="app-box"><span class="emoji">🐍</span>Flask Pod</div>
+            <div class="app-box"><span class="emoji">🐍</span>Flask Pod</div>
+          </div>
+        </div>
+        <div class="mini">
+          <h3>Automated Sync</h3>
+          <div class="muted"><code>prune: true</code> removes old resources and <code>selfHeal: true</code> corrects drift automatically.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <strong>End-to-end pipeline:</strong> A developer pushes code to the Flask application repository. GitHub Actions runs tests, builds the Docker image, scans it with Trivy, and pushes the approved image to Docker Hub. The workflow then updates the deployment repository with the new image tag. Argo CD watches that GitOps repository and automatically syncs the change into Kubernetes using Helm, updating the running Flask application behind a LoadBalancer service.
+    </div>
+  </div>
+</body>
+</html>

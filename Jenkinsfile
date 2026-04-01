@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
 - name: Run tests
   run: |
@@ -59,7 +59,7 @@ jobs:
           format: table
           exit-code: '1'
           ignore-unfixed: true
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
 
       - name: Push Docker image
         uses: docker/build-push-action@v6

@@ -4,6 +4,10 @@ This project demonstrates a complete **Continuous Integration (CI)** pipeline fo
 
 The pipeline automatically tests the application, builds a Docker image, scans it for vulnerabilities, and pushes the image to Docker Hub.
 
+
+![Architecture Diagram](diagram/full-project-diagram.png)
+
+
 ---
 
 ## 📌 Project Overview

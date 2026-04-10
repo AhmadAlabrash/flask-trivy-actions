@@ -27,6 +27,13 @@ Whenever code is pushed to the repository, GitHub Actions automatically runs the
 
 ---
 
+## ⚙️ System Demo
+
+Watch this system in action:
+
+[![System Demo ▶️](https://img.youtube.com/vi/7pHcaz9TBJQ/maxresdefault.jpg)](https://youtu.be/7pHcaz9TBJQ)
+
+
 ## 🧰 Technologies Used
 
 * **Python / Flask** – Web application
